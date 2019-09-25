@@ -3,46 +3,38 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const chalk = require('chalk');
 const ConsoleGrid = require('console-grid');
+const npath = require('path')
+let config = require('../config');
 
 class FetchMiGuMusic {
-	constructor(path = './', keyword = '周杰伦', isAsync = false) {
+	constructor({path = './', keyword = '周杰伦', isAsync = false}) {
 		Object.assign(this, {path, keyword, isAsync});
-		console.log(this);
-		this.baseUrl = `http://music.migu.cn/v3/search/?keyword=${encodeURIComponent(this.keyword)}`;
 		this.musicInfo = [];
-		this.logs = {
-			startDate: Date.now(),
-			getCountPages: {
-				desc: '获取总页数',
-				date: 0
-			},
-			getMusicInfo: {
-				desc: '获取音乐信息',
-				date: 0
-			},
-			downMusic: {
-				desc: '下载音乐',
-				date: 0
-			}
-		};
-		this.config = {
-			"credentials": "include",
-			"headers": {
-				"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
-				"accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh-TW;q=0.7,zh;q=0.6,su;q=0.5",
-				"upgrade-insecure-requests": "1",
-				"Referer": "http://music.migu.cn",
-			},
-			"referrerPolicy": "no-referrer-when-downgrade",
-			"body": null,
-			"method": "GET",
-			"mode": "cors"
+		this.searchUrl = `${config.searchUrl}${encodeURIComponent(keyword)}`;
+		this.path = npath.resolve(this.path, `music-${this.keyword}`);
+		this.optLog();
+	}
+	async checkIsLogin() {
+		let res = await this.getDownLink(config.copyrightId, config.songName, true);
+		if (res instanceof Object && res.returnCode !== '000000') {
+			console.log(chalk.red(`${res.returnDesc || res.msg}, 执行命令 'f2m login username password'`));
+			return false;
+		} else {
+			return true;
+		}
+	}
+	static async login({username = '', password = ''}) {
+		if (username === '' || password === '') {
+			console.log(chalk.red('用户名/密码不能为空'));
+			return;
+		} else {
+			console.log(chalk.red('登录功能开发中..., 打开 http://music.migu.cn/v3 登录完以后, 打开开发者工具把Cookie粘过来写到config.js文件 ~_~'));
 		}
 	}
 	async getCountPages() {
 		console.log(this.printEmbellish('开始获取总页数'));
 		let date = Date.now(),
-			htmlText = await this.fetchHtml(this.baseUrl),
+			htmlText = await this.fetchHtml(this.searchUrl),
 			$ = cheerio.load(htmlText),
 			lastPage = 1;
 		$('.tab-content .page a').each((k, v) => {
@@ -89,22 +81,22 @@ class FetchMiGuMusic {
 		return musicInfo;
 	}
 	async downMusic() {
+		if (!await this.checkIsLogin()) return;
+		if (!this.createFolder()) return;
 		let countPage = await this.getCountPages(),
 			date = Date.now();
 		console.log(this.printEmbellish('开始获取下载链接'));
 		for (let i = 1; i <= countPage; i++) {
 			console.log(`开始获取第${chalk.green(i)}页下载链接\n`);
-			let arr = await this.getMusicInfo(`${this.baseUrl}${+i > 1 ? '&page=' + i : ''}`);
+			let arr = await this.getMusicInfo(`${this.searchUrl}${+i > 1 ? '&page=' + i : ''}`);
 			this.musicInfo.push(...arr);
 			console.log(`获取第${i}页下载链接完毕, 共有${chalk.green(arr.length)}个下载链接\n`);
 		}
 		this.logs.getMusicInfo.date = Date.now() - date;
-		if (this.createFolder()) {
-			console.log(this.printEmbellish('开始下载音乐'));
-			await this.startDown();
-			console.log(this.printEmbellish('下载完成'));
-			this.showLog();
-		}
+		console.log(this.printEmbellish('开始下载音乐'));
+		await this.startDown();
+		console.log(this.printEmbellish('下载完成'));
+		this.showLog();
 	}
 	async startDown() {
 		let proArr = [],
@@ -115,7 +107,7 @@ class FetchMiGuMusic {
 					console.log(`${chalk.green('开始下载歌曲'+ chalk.bold(chalk.blue(v.songName)))}`);
 					await fetch(v.downUrl)
 						.then(res => {
-							const dest = fs.createWriteStream(`./周杰伦/${v.songName}.mp3`);
+							const dest = fs.createWriteStream(`${this.path}/${v.songName}.mp3`);
 							res.body.pipe(dest);
 							v.downStatus = true;
 							console.log(`${chalk.green('下载歌曲'+ chalk.bold(chalk.blue(v.songName)) +'成功')}`);
@@ -137,22 +129,48 @@ class FetchMiGuMusic {
 		this.logs.downMusic.date = Date.now() - date;
 	}
 	createFolder() {
-		let res = false,
-			path = `./${this.keyword}`;
+		let errorTxt = '';
 		try {
-			if (!fs.existsSync(path)) {
-				fs.mkdirSync(path);
-				res = true;
+			if (!fs.existsSync(this.path)) {
+				fs.mkdirSync(this.path);
 			} else {
-				console.log('文件夹已经存在');
+				errorTxt = `${this.path} 已经存在`;
 			}
 		} catch (e) {
-			console.log('创建文件夹失败');
+			errorTxt = '创建文件夹失败';
 		}
-		return true;
+		return errorTxt ? console.log(chalk.red(errorTxt)) : true;
 	}
 	printEmbellish(content, qualifier = '-', repeat = 15) {
 		return chalk.green(`${qualifier.repeat(repeat)}${content}${qualifier.repeat(repeat)}\n`);
+	}
+	optLog(key, val) {
+		if (!('logs' in this)) {
+			this.logs = {
+				startDate: {
+					desc: '开始下载时间',
+					date: 0
+				},
+				endDate: {
+					desc: '结束下载时间',
+					date: 0
+				},
+				getCountPages: {
+					desc: '获取总页数',
+					date: 0
+				},
+				getMusicInfo: {
+					desc: '获取音乐信息',
+					date: 0
+				},
+				downMusic: {
+					desc: '下载音乐',
+					date: 0
+				}
+			};
+			return;
+		}
+		if (key in this.logs) this.logs[key].date = val;
 	}
 	showLog() {
 		this.logs.endDate = Date.now();
@@ -237,7 +255,7 @@ class FetchMiGuMusic {
 		new ConsoleGrid().render(log);
 		process.exit(0);
 	}
-	async getDownLink(copyrightId, songName) {
+	async getDownLink(copyrightId, songName, isTest = false) {
 		console.log(`${chalk.green('开始获取歌曲'+ chalk.bold(chalk.blue(songName)) +'下载地址')}`);
 		let dlink = '',
 			errorTxt = `${chalk.red('获取歌曲'+ chalk.bold(chalk.blue(songName)) +'下载地址失败')}`;
@@ -254,18 +272,9 @@ class FetchMiGuMusic {
 		params.append('payType', '01');
 		params.append('type', 1);
 
-		await fetch('http://music.migu.cn/v3/api/order/download', {
-				method: 'post',
-				body: params,
-				"headers": {
-					"accept": "*/*",
-					"accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh-TW;q=0.7,zh;q=0.6,su;q=0.5",
-					"content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-					"x-requested-with": "XMLHttpRequest",
-					"Referer": "http://music.migu.cn",
-					"Cookie": "migu_cookie_id=42616c1b-cd80-4993-89ed-bf6c0cbec2ba-n41569223802911; WT_FPC=id=2a3059d23a73fcf6af01569236896446:lv=1569237294248:ss=1569236896446; player_stop_open=0; addplaylist_has=1; add_play_now=1; audioplayer_exist=1; audioplayer_open=1; audioplayer_new=0; playlist_change=0; playlist_adding=0; migu_music_status=true; migu_music_uid=15687995484370450854210; migu_music_avatar=%252F%252Fcdnmusic.migu.cn%252Fv3%252Fstatic%252Fimg%252Fcommon%252Fheader%252Fdefault-avatar.png; migu_music_nickname=%E5%92%AA%E5%92%95%E7%94%A8%E6%88%B7; migu_music_level=0; migu_music_credit_level=1; migu_music_platinum=0; migu_music_msisdn=17610915918; migu_music_email=; migu_music_sid=s%3A4Ggfx4Z87HCri4JotLBaFyHmsRBnE1pQ.GPfyqbjFJhkUfY2%2BCep04e9z2QIOhugqCegSoJf5iv0"
-				},
-			})
+		config.postHeader.body = params;
+
+		await fetch('http://music.migu.cn/v3/api/order/download', config.postHeader)
 			.then(res => res.json())
 			.then(data => {
 				if (data.returnCode === '000000' && data.returnDesc === '恭喜您！验证成功！请在浏览器中完成下载') {
@@ -273,6 +282,7 @@ class FetchMiGuMusic {
 					console.log(`${chalk.green('获取歌曲'+ chalk.bold(chalk.blue(songName)) +'下载地址成功')}`);
 				} else {
 					console.log(errorTxt);
+					if (isTest) dlink = data;
 				}
 			}).
 		catch((e) => {
@@ -281,7 +291,7 @@ class FetchMiGuMusic {
 		return dlink;
 	}
 	async fetchHtml(url) {
-		return await fetch(url, this.config)
+		return await fetch(url, config.getHeaders)
 			.then(res => res.text())
 			.then(body => body)
 	}

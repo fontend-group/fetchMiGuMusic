@@ -1,0 +1,44 @@
+#!/usr/bin/env node
+
+"use strict"
+
+const program = require('commander')
+const pkg = require('../package.json')
+const path = require('path')
+const fs = require('fs')
+const chalk = require('chalk')
+const {FetchMiGuMusic} = require('../FetchMiGuMusic')
+
+/**
+ * 描述
+ */
+program
+	.version(pkg.version)
+	.usage('[command]')
+	.description('f2m 音乐批量下载工具')
+
+/**
+ * 清除已构建的目录
+ */
+program
+	// .command('clean [env]')
+	.description('批量下载migu音乐')
+	.option('-p, --path [path]','音乐存储路径, 默认当前根目录')
+	.option('-k, --keyword [keyword]','搜索keyword, 默认周杰伦')
+	.option('-a, --isAsync [isAsync]','下载模式是否异步, 默认同步, 值为布尔型true/false')
+	.action(function({path, keyword, isAsync}){
+		new FetchMiGuMusic(path, keyword, isAsync).downMusic();
+	});
+
+program.parse(process.argv);
+
+/**
+ * 当用户没有输入任何命令或选项的时候，自动提示帮助
+ */
+if (!program.rawArgs.length){
+	help();
+}
+
+function help() {
+	program.help();
+}

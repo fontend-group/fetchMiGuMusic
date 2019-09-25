@@ -5,12 +5,11 @@ const chalk = require('chalk');
 const ConsoleGrid = require('console-grid');
 
 class FetchMiGuMusic {
-	constructor(keyword = '朱一龙', concurrency = 3) {
-		this.keyword = keyword;
+	constructor(path = './', keyword = '周杰伦', isAsync = false) {
+		Object.assign(this, {path, keyword, isAsync});
+		console.log(this);
 		this.baseUrl = `http://music.migu.cn/v3/search/?keyword=${encodeURIComponent(this.keyword)}`;
-		this.concurrency = concurrency;
 		this.musicInfo = [];
-		this.isAsync = true;
 		this.logs = {
 			startDate: Date.now(),
 			getCountPages: {
@@ -288,6 +287,4 @@ class FetchMiGuMusic {
 	}
 }
 
-let fm = new FetchMiGuMusic();
-
-fm.downMusic();
+exports.FetchMiGuMusic = FetchMiGuMusic;

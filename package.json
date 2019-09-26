@@ -2,10 +2,20 @@
   "name": "getJayMusic",
   "version": "1.0.0",
   "main": "./bin/cli.js",
+  "author": "noneyli",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:noney/fetchMiGuMusic.git"
+  },
   "bin": {
     "f2m": "bin/cli.js"
   },
   "license": "MIT",
+  "keywords": [
+    "migu",
+    "download",
+    "music"
+  ],
   "dependencies": {
     "chalk": "^2.4.2",
     "cheerio": "^1.0.0-rc.3",

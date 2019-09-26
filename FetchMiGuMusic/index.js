@@ -27,6 +27,7 @@ class FetchMiGuMusic {
 		this.path = npath.resolve(this.path, `music-${this.keyword}`);
 		// log
 		this.optLog();
+		console.log(this.searchUrl, this.keyword)
 	}
 	/**
 	 * [checkIsLogin 检查登录状态]
@@ -145,6 +146,11 @@ class FetchMiGuMusic {
 	 * @return {[type]} [description]
 	 */
 	async downMusic() {
+		// 检测keyword
+		if (this.keyword === '') {
+			console.log(chalk.red('keyword 不能为空'));
+			return;
+		}
 		// 检测是否登录
 		if (!await this.handleAsync(this.checkIsLogin, '检测登录')) return;
 

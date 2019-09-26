@@ -1,7 +1,7 @@
 # fetchMiGuMusic
 
 ## ~ node bin/cli.js  
-
+Usage: cli [command]  
 f2m 音乐批量下载工具  
 
 Options:  
@@ -23,7 +23,7 @@ Options:
   -p, --password [password]  密码  
   -h, --help                 output usage information  
 
-## ~ node bin/cli.js down -h  
+#### ~ node bin/cli.js down -h  
 Usage: cli down [options]  
 
 批量下载migu音乐  

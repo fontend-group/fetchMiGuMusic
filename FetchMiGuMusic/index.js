@@ -16,7 +16,9 @@ class FetchMiGuMusic {
 	 */
 	constructor({path = './', keyword = '周杰伦', isAsync = false}) {
 		// assign key
-		Object.assign(this, {path, keyword, isAsync});
+		Object.assign(this, {path, keyword});
+		// isAsync
+		this.isAsync = (isAsync === true || isAsync === 'true') ? true : false;
 		// 音乐信息
 		this.musicInfo = [];
 		// 搜索url

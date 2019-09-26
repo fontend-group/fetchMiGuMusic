@@ -27,7 +27,6 @@ class FetchMiGuMusic {
 		this.path = npath.resolve(this.path, `music-${this.keyword}`);
 		// log
 		this.optLog();
-		console.log(this.searchUrl, this.keyword)
 	}
 	/**
 	 * [checkIsLogin 检查登录状态]
